@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Minh họa Kruskal, Prim và AVL – Bài 8</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#DCE5E8; --panel:#F4F8F9; --ink:#16243A; --muted:#566578; --line:#B7C5CD;
+  --codebg:rgba(22,36,58,.09);
+  --gold:#E0A526; --goldA:rgba(224,165,38,.3);
+  --err:#C8352B; --ok:#1F7A5C;
+  --font:'Be Vietnam Pro',system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1622; --panel:#152234; --ink:#E4ECF2; --muted:#9BABBC; --line:#2B3C53;
+    --codebg:rgba(228,236,242,.1); --err:#FF7B6F; --ok:#5FCFA5;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1622; --panel:#152234; --ink:#E4ECF2; --muted:#9BABBC; --line:#2B3C53;
+  --codebg:rgba(228,236,242,.1); --err:#FF7B6F; --ok:#5FCFA5;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+code{font-family:var(--mono);font-size:.88em;background:var(--codebg);padding:1px 6px;border-radius:4px}
+
+.wrap{max-width:1160px;margin:0 auto;padding:28px 20px 56px}
+header h1{margin:0;font-size:clamp(34px,5.6vw,60px);line-height:1.02;font-weight:800;letter-spacing:-.04em}
+header p{margin:12px 0 0;max-width:62ch;color:var(--muted);font-size:17px}
+
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:26px 0 14px}
+.tab{border:1.5px solid var(--ink);background:transparent;border-radius:999px;padding:8px 20px;font-weight:600;cursor:pointer}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+
+.opts{display:flex;flex-wrap:wrap;align-items:center;gap:10px 22px;margin:0 0 14px;font-size:15px}
+.opts label{display:inline-flex;align-items:center;gap:8px}
+.opts select,.opts input[type=text]{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 10px}
+.opts input[type=text]{width:230px;font-family:var(--mono);font-size:14px}
+.opts button{border:0;border-radius:999px;background:var(--ink);color:var(--bg);padding:7px 18px;font-weight:600;cursor:pointer}
+.opts .err{color:var(--err);font-size:14px}
+
+.stage{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.vis{padding:14px;border-right:1px solid var(--line);min-width:0}
+.vis svg{display:block;width:100%;height:auto}
+.legend{margin:6px 6px 0;font-size:13.5px;color:var(--muted)}
+.side{padding:20px 24px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.stats{display:flex;gap:28px}
+.stats div{border-left:3px solid var(--gold);padding-left:12px}
+.stats span{display:block;font-size:13px;color:var(--muted)}
+.stats b{font-size:24px;font-weight:800}
+.say{margin:0;font-size:17px;font-weight:600;line-height:1.55;min-height:5.2em}
+.say code{white-space:nowrap}
+.list h3{margin:0 0 6px;font-size:14px;font-weight:600;color:var(--muted)}
+.row{display:grid;grid-template-columns:28px 1fr 44px 64px;align-items:center;gap:6px;padding:5px 8px;border-bottom:1px solid var(--line);font-size:15px;border-left:4px solid transparent}
+.row .n{color:var(--muted);font-size:13px}
+.row .ed{font-family:var(--mono);font-size:14px}
+.row .w{font-weight:800;text-align:right}
+.row .tag{font-size:13px;font-weight:600;text-align:right;color:var(--muted)}
+.row.cur{background:var(--goldA);border-left-color:var(--gold)}
+.row.acc .tag{color:var(--ok)}
+.row.rej .tag{color:var(--err)}
+.row.rej .ed{text-decoration:line-through;text-decoration-color:var(--err)}
+.row.pick{background:rgba(31,122,92,.14);border-left-color:var(--ok)}
+.row.pick .tag{color:var(--ok)}
+.none{margin:0;color:var(--muted);font-size:14.5px}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{min-width:34px;text-align:center;padding:3px 8px;border:1.5px solid var(--line);border-radius:999px;font-family:var(--mono);font-size:14px;color:var(--muted)}
+.chip.done{border-color:var(--ink);color:var(--ink)}
+.chip.now{background:var(--gold);border-color:var(--gold);color:#16243A;font-weight:600}
+.cases{width:100%;border-collapse:collapse;font-size:14px}
+.cases th{text-align:left;font-weight:600;color:var(--muted);font-size:12.5px;padding:0 6px 4px 0;border-bottom:2px solid var(--ink)}
+.cases td{padding:5px 6px 5px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.cases tr.on td{background:var(--goldA)}
+
+.bar{display:flex;align-items:center;flex-wrap:wrap;gap:12px 18px;margin-top:14px}
+.btns{display:flex;gap:8px;align-items:center}
+.ib{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center;cursor:pointer}
+.ib:hover{border-color:var(--ink)}
+.ib:disabled{opacity:.4;cursor:default}
+.auto{height:44px;border-radius:999px;border:0;background:var(--ink);color:var(--bg);padding:0 22px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+.prog{flex:1 1 160px;height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:var(--ink);transition:width .3s}
+.cnt{font-size:14px;color:var(--muted);white-space:nowrap}
+
+/* svg */
+svg text{font-family:var(--mono)}
+.e{stroke:var(--muted);stroke-opacity:.5;stroke-width:2.5;fill:none;stroke-linecap:round}
+.e.acc{stroke:var(--ok);stroke-opacity:1;stroke-width:6}
+.e.rej{stroke:var(--err);stroke-opacity:1;stroke-width:3;stroke-dasharray:7 6}
+.e.cand{stroke:var(--gold);stroke-opacity:1;stroke-width:4}
+.e.skip{stroke-dasharray:3 6;stroke-opacity:.4}
+.halo{stroke:var(--gold);stroke-opacity:.38;stroke-width:15;fill:none;stroke-linecap:round}
+.wl rect{fill:var(--panel)}
+.wl text{fill:var(--ink);font-size:14px;font-weight:600;text-anchor:middle;dominant-baseline:central}
+.wl.acc text{fill:var(--ok);font-weight:800}
+.wl.rej text{fill:var(--err)}
+.vt text{font-size:16px;font-weight:600;text-anchor:middle;dominant-baseline:central}
+.vc{stroke:var(--ink);stroke-width:2.5}
+.ring{fill:none;stroke:var(--gold);stroke-width:4}
+.ring.viol{stroke:var(--err)}
+.ring.mv{stroke:var(--ok)}
+.te{stroke:var(--ink);stroke-width:2.5}
+.bf{font-size:13px;font-weight:600;fill:var(--muted);text-anchor:start}
+.bf.bad{fill:var(--err);font-weight:800}
+
+.note{margin-top:26px;padding:14px 18px;border-left:4px solid var(--gold);background:var(--panel);border-radius:0 8px 8px 0;font-size:15px;max-width:80ch}
+
+@media (max-width:860px){
+  .stage{grid-template-columns:1fr}
+  .vis{border-right:0;border-bottom:1px solid var(--line)}
+  .opts input[type=text]{width:100%}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <h1>Kruskal, Prim và cây AVL</h1>
+    <p>Chạy từng bước các thuật toán trong Bài 8, dùng đúng đồ thị và dãy số của slide. Bấm Bước sau, hoặc phím →, để xem mỗi quyết định được đưa ra như thế nào.</p>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Chọn thuật toán">
+    <button class="tab" role="tab" data-mode="kruskal" aria-selected="true">Kruskal</button>
+    <button class="tab" role="tab" data-mode="prim" aria-selected="false">Prim</button>
+    <button class="tab" role="tab" data-mode="avl" aria-selected="false">Cây AVL</button>
+  </nav>
+
+  <div class="opts" id="opts"></div>
+
+  <section class="stage" aria-live="polite">
+    <div class="vis"><div id="vis"></div><p class="legend" id="legend"></p></div>
+    <div class="side">
+      <div class="stats" id="stats"></div>
+      <p class="say" id="say"></p>
+      <div class="list" id="list"></div>
+    </div>
+  </section>
+
+  <div class="bar">
+    <div class="btns">
+      <button class="ib" id="bFirst" type="button" aria-label="Về đầu" title="Về đầu"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 5V2L7 6l5 4V7a6 6 0 1 1-6 6H4a8 8 0 1 0 8-8z" fill="currentColor"/></svg></button>
+      <button class="ib" id="bPrev" type="button" aria-label="Bước trước" title="Bước trước (←)"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14L9 12z" fill="currentColor"/></svg></button>
+      <button class="auto" id="bAuto" type="button">Tự chạy</button>
+      <button class="ib" id="bNext" type="button" aria-label="Bước sau" title="Bước sau (→)"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5v14l11-7z" fill="currentColor"/></svg></button>
+    </div>
+    <div class="prog"><i id="prog"></i></div>
+    <div class="cnt" id="cnt"></div>
+  </div>
+
+  <p class="note"><b>Khác nhau ở đâu?</b> Kruskal duyệt theo cạnh: sắp xếp mọi cạnh theo trọng số, rồi nạp cạnh nào không tạo chu trình. Prim duyệt theo đỉnh: bắt đầu từ một đỉnh và mở rộng dần cây bằng cạnh nhẹ nhất đi ra ngoài. Hai cách có thể chọn cạnh theo thứ tự khác nhau nhưng cho cùng tổng trọng số nhỏ nhất.</p>
+</main>
+
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const MINUS='−';
+const fmt=n=>n>0?'+'+n:n<0?MINUS+Math.abs(n):'0';
+const PAL=['#2F6F8F','#E0A526','#7A5C9E','#3B8558','#D67F4B','#B5497A','#5A6675'];
+const PTX=['#fff','#16243A','#fff','#fff','#16243A','#fff','#fff'];
+
+/* ================= đồ thị ================= */
+const GR={
+  vd:{name:'Ví dụ trong slide (v1 – v6)',n:6,
+    labels:['v1','v2','v3','v4','v5','v6'],
+    pts:[[70,185],[215,70],[215,300],[430,70],[430,300],[580,185]],
+    edges:[[0,1,33],[0,2,17],[1,2,18],[1,3,20],[2,3,16],[2,4,4],[3,4,9],[3,5,8],[4,5,14]]},
+  bt:{name:'Bài tập Kruskal (A – G)',n:7,
+    labels:['A','B','C','D','E','F','G'],
+    pts:[[60,50],[280,110],[570,65],[75,255],[500,235],[285,325],[570,335]],
+    edges:[[0,1,7],[0,3,5],[1,2,8],[1,3,9],[1,4,7],[2,4,5],[3,4,15],[3,5,6],[4,5,8],[4,6,9],[5,6,11]]}
+};
+const eName=(G,i)=>{const [a,b]=GR[G].edges[i];return `(${GR[G].labels[a]}, ${GR[G].labels[b]})`;};
+
+function graphSVG(G,o){
+  let s='<svg viewBox="0 0 640 370" role="img" aria-label="Đồ thị có trọng số">';
+  const E=G.edges;
+  if(o.cur>=0){const [a,b]=E[o.cur];s+=`<line class="halo" x1="${G.pts[a][0]}" y1="${G.pts[a][1]}" x2="${G.pts[b][0]}" y2="${G.pts[b][1]}"/>`;}
+  E.forEach((e,i)=>{const c=o.eCls(i);s+=`<line class="e ${c}" x1="${G.pts[e[0]][0]}" y1="${G.pts[e[0]][1]}" x2="${G.pts[e[1]][0]}" y2="${G.pts[e[1]][1]}"/>`;});
+  E.forEach((e,i)=>{
+    const c=o.eCls(i),mx=(G.pts[e[0]][0]+G.pts[e[1]][0])/2,my=(G.pts[e[0]][1]+G.pts[e[1]][1])/2,w=String(e[2]).length*10+12;
+    s+=`<g class="wl ${c}"><rect x="${mx-w/2}" y="${my-11}" width="${w}" height="22" rx="4"/><text x="${mx}" y="${my}">${e[2]}</text></g>`;
+  });
+  G.labels.forEach((l,v)=>{
+    const [x,y]=G.pts[v],f=o.vFill(v);
+    if(o.ring&&o.ring(v))s+=`<circle class="ring" cx="${x}" cy="${y}" r="30"/>`;
+    s+=`<g class="vt"><circle class="vc" cx="${x}" cy="${y}" r="23" style="fill:${f.fill}"/><text x="${x}" y="${y}" style="fill:${f.tx}">${l}</text></g>`;
+  });
+  return s+'</svg>';
+}
+
+/* ================= Kruskal ================= */
+function buildKruskal(gk){
+  const G=GR[gk],n=G.n,E=G.edges,L=G.labels;
+  const order=E.map((_,i)=>i).sort((a,b)=>E[a][2]-E[b][2]||a-b);
+  const par=[...Array(n).keys()];
+  const find=x=>par[x]===x?x:(par[x]=find(par[x]));
+  const status=Array(E.length).fill(0);
+  const comps=()=>{const m={},out=[];for(let v=0;v<n;v++){const r=find(v);if(m[r]===undefined)m[r]=v;out.push(m[r]);}return out;};
+  const steps=[];let cnt=0,total=0;
+  steps.push({status:[...status],cur:-1,comp:comps(),cnt,total,pos:-1,
+    text:`Đặt F = ∅. Sắp xếp các cạnh theo trọng số tăng dần (bảng bên phải). Mỗi đỉnh đang là một thành phần riêng, nên mỗi đỉnh có một màu.`});
+  for(let p=0;p<order.length&&cnt<n-1;p++){
+    const ei=order[p],[a,b,w]=E[ei],ra=find(a),rb=find(b);
+    let text;
+    if(ra!==rb){par[ra]=rb;status[ei]=1;cnt++;total+=w;
+      text=`Xét cạnh ${eName(gk,ei)}, w = ${w}: ${L[a]} và ${L[b]} thuộc hai thành phần khác nhau, nên nạp vào F. Hai thành phần gộp lại thành một (cùng màu). |F| = ${cnt}.`;}
+    else{status[ei]=2;
+      text=`Xét cạnh ${eName(gk,ei)}, w = ${w}: ${L[a]} và ${L[b]} đã nối được với nhau trong F. Nạp thêm sẽ tạo chu trình, nên bỏ qua.`;}
+    steps.push({status:[...status],cur:ei,comp:comps(),cnt,total,pos:p,text});
+  }
+  steps.push({status:[...status],cur:-1,comp:comps(),cnt,total,pos:order.length,done:true,
+    text:`|F| = ${cnt} = n − 1 nên dừng. Các cạnh còn lại không cần xét. Cây khung ngắn nhất có tổng trọng số ${total}.`});
+  return {steps,order,G,gk};
+}
+function renderKruskal(){
+  const B=S.built.kruskal,st=B.steps[S.idx.kruskal],G=B.G;
+  $('vis').innerHTML=graphSVG(G,{
+    cur:st.cur,
+    eCls:i=>st.status[i]===1?'acc':st.status[i]===2?'rej':'',
+    vFill:v=>({fill:PAL[st.comp[v]%PAL.length],tx:PTX[st.comp[v]%PAL.length]})
+  });
+  $('legend').textContent='Màu của đỉnh cho biết thành phần liên thông. Cạnh xanh đậm đã nằm trong F, cạnh đỏ nét đứt bị loại vì tạo chu trình.';
+  $('stats').innerHTML=`<div><span>|F|</span><b>${st.cnt} / ${G.n-1}</b></div><div><span>Tổng trọng số</span><b>${st.total}</b></div>`;
+  $('say').innerHTML=st.text;
+  let h='<h3>Các cạnh đã sắp xếp theo trọng số tăng dần</h3>';
+  B.order.forEach((ei,p)=>{
+    const s=st.status[ei],cur=ei===st.cur;
+    h+=`<div class="row ${s===1?'acc':s===2?'rej':''} ${cur?'cur':''}"><span class="n">${p+1}</span><span class="ed">${eName(B.gk,ei)}</span><span class="w">${G.edges[ei][2]}</span><span class="tag">${s===1?'nạp':s===2?'loại':(st.done?'không xét':'chờ')}</span></div>`;
+  });
+  $('list').innerHTML=h;
+}
+
+/* ================= Prim ================= */
+function buildPrim(gk,s){
+  const G=GR[gk],n=G.n,E=G.edges,L=G.labels;
+  const vis=Array(n).fill(false);vis[s]=true;
+  const F=[];let total=0;const steps=[];
+  steps.push({vis:[...vis],visBefore:[...vis],F:[],front:[],pick:-1,nv:s,total,
+    text:`Đặt F = ∅ và chọn đỉnh xuất phát u = ${L[s]} (tô màu xanh). Từ đây cây sẽ lớn dần, mỗi bước thêm đúng một đỉnh.`});
+  while(F.length<n-1){
+    const visBefore=[...vis];
+    const front=[];E.forEach((e,i)=>{if(vis[e[0]]!==vis[e[1]])front.push(i);});
+    front.sort((a,b)=>E[a][2]-E[b][2]||a-b);
+    const pick=front[0],[a,b,w]=E[pick],nv=vis[a]?b:a;
+    vis[nv]=true;F.push(pick);total+=w;
+    const set=L.filter((_,v)=>visBefore[v]).join(', ');
+    const others=front.length>1?`Trong ${front.length} cạnh nối ra ngoài (màu vàng), `:'Chỉ có một cạnh nối ra ngoài, ';
+    steps.push({vis:[...vis],visBefore,F:[...F],front,pick,nv,total,
+      text:`Tập đỉnh đã chọn: {${set}}. ${others}cạnh nhẹ nhất là ${eName(gk,pick)}, w = ${w}. Chọn cạnh này và thêm đỉnh ${L[nv]} vào cây. |F| = ${F.length}.`});
+  }
+  steps.push({vis:[...vis],visBefore:[...vis],F:[...F],front:[],pick:-1,nv:-1,total,done:true,
+    text:`|F| = ${F.length} = n − 1 nên dừng. Cây khung ngắn nhất có tổng trọng số ${total}.`});
+  return {steps,G,gk};
+}
+function renderPrim(){
+  const B=S.built.prim,st=B.steps[S.idx.prim],G=B.G;
+  const inF=new Set(st.F);
+  $('vis').innerHTML=graphSVG(G,{
+    cur:st.pick,
+    eCls:i=>inF.has(i)?'acc':st.front.includes(i)?'cand':(st.vis[G.edges[i][0]]&&st.vis[G.edges[i][1]])?'skip':'',
+    vFill:v=>st.vis[v]?{fill:'#3B8558',tx:'#fff'}:{fill:'var(--panel)',tx:'var(--ink)'},
+    ring:v=>v===st.nv&&!st.done
+  });
+  $('legend').textContent='Đỉnh xanh đã thuộc cây. Cạnh vàng là các cạnh nối ra ngoài đang được so sánh, cạnh xanh đậm đã được chọn, cạnh mờ nét đứt nối hai đỉnh đã chọn nên bị loại vì sẽ tạo chu trình.';
+  $('stats').innerHTML=`<div><span>|F|</span><b>${st.F.length} / ${G.n-1}</b></div><div><span>Tổng trọng số</span><b>${st.total}</b></div>`;
+  $('say').innerHTML=st.text;
+  let h='<h3>Các cạnh nối ra ngoài tập đỉnh đã chọn (tăng dần)</h3>';
+  if(!st.front.length)h+=`<p class="none">${st.done?'Không còn đỉnh nào để thêm.':'Chưa so sánh cạnh nào. Bước sau sẽ xét các cạnh liên thuộc đỉnh xuất phát.'}</p>`;
+  st.front.forEach((ei,p)=>{
+    h+=`<div class="row ${ei===st.pick?'pick':''}"><span class="n">${p+1}</span><span class="ed">${eName(B.gk,ei)}</span><span class="w">${G.edges[ei][2]}</span><span class="tag">${ei===st.pick?'chọn':''}</span></div>`;
+  });
+  $('list').innerHTML=h;
+}
+
+/* ================= AVL ================= */
+const H=n=>n?1+Math.max(H(n.l),H(n.r)):0;
+const clone=n=>n?{k:n.k,l:clone(n.l),r:clone(n.r)}:null;
+const rotR=n=>{const y=n.l;n.l=y.r;y.r=n;return y;};
+const rotL=n=>{const y=n.r;n.r=y.l;y.l=n;return y;};
+const CASES={
+  LL:{d:'cây con trái của nút con trái',a:'xoay phải'},
+  RR:{d:'cây con phải của nút con phải',a:'xoay trái'},
+  LR:{d:'cây con phải của nút con trái',a:'xoay kép: xoay trái ở nút con, rồi xoay phải ở nút vi phạm'},
+  RL:{d:'cây con trái của nút con phải',a:'xoay kép: xoay phải ở nút con, rồi xoay trái ở nút vi phạm'}
+};
+function buildAVL(seq){
+  let root=null;const steps=[];
+  steps.push({tree:null,flags:{},i:-1,cs:'',text:`Bắt đầu với cây AVL rỗng. Sẽ lần lượt thêm: ${seq.join(', ')}. Hệ số cân bằng = chiều cao cây con phải − chiều cao cây con trái, phải thuộc {−1, 0, +1}.`});
+  seq.forEach((k,i)=>{
+    const path=[];
+    if(!root){root={k,l:null,r:null};path.push(root);}
+    else{let c=root;for(;;){path.push(c);
+      if(k<c.k){if(!c.l){c.l={k,l:null,r:null};path.push(c.l);break;}c=c.l;}
+      else{if(!c.r){c.r={k,l:null,r:null};path.push(c.r);break;}c=c.r;}}}
+    let vi=-1;
+    for(let j=path.length-1;j>=0;j--){const n=path[j];if(Math.abs(H(n.r)-H(n.l))>1){vi=j;break;}}
+    if(vi<0){
+      steps.push({tree:clone(root),flags:{nw:k},i,cs:'',text:`Thêm ${k} theo luật cây tìm kiếm nhị phân. Hệ số cân bằng của mọi nút đều thuộc {−1, 0, +1}, cây vẫn là AVL nên không cần xoay.`});
+      return;
+    }
+    const node=path[vi],bf=H(node.r)-H(node.l);
+    let cs,child,gc;
+    if(bf<0){child=node.l;cs=(H(child.r)-H(child.l))<=0?'LL':'LR';}
+    else{child=node.r;cs=(H(child.r)-H(child.l))>=0?'RR':'RL';}
+    steps.push({tree:clone(root),flags:{nw:k,viol:node.k},i,cs,
+      text:`Thêm ${k}. Nút ${node.k} có hệ số cân bằng ${fmt(bf)}, vi phạm tính chất AVL (vòng đỏ). Đây là trường hợp ${cs}: ${k} nằm ở ${CASES[cs].d}. Cách xử lý: ${CASES[cs].a}.`});
+    const parent=path[vi-1];
+    const attach=sub=>{if(parent){if(parent.l===node)parent.l=sub;else parent.r=sub;}else root=sub;};
+    if(cs==='LL'){attach(rotR(node));
+      steps.push({tree:clone(root),flags:{moved:[node.k,child.k]},i,cs,text:`Xoay phải tại ${node.k}: nút con trái ${child.k} đi lên làm gốc, ${node.k} trở thành con phải của ${child.k}. Các nút trở lại cân bằng.`});}
+    else if(cs==='RR'){attach(rotL(node));
+      steps.push({tree:clone(root),flags:{moved:[node.k,child.k]},i,cs,text:`Xoay trái tại ${node.k}: nút con phải ${child.k} đi lên làm gốc, ${node.k} trở thành con trái của ${child.k}. Các nút trở lại cân bằng.`});}
+    else if(cs==='LR'){gc=child.r;node.l=rotL(child);
+      steps.push({tree:clone(root),flags:{moved:[child.k,gc.k]},i,cs,text:`Xoay kép, phép thứ nhất: xoay trái tại nút con ${child.k}. ${gc.k} đi lên, đưa cây về dạng LL.`});
+      attach(rotR(node));
+      steps.push({tree:clone(root),flags:{moved:[node.k,gc.k]},i,cs,text:`Phép thứ hai: xoay phải tại ${node.k}. ${gc.k} trở thành gốc của nhánh, cả ba nút ${child.k}, ${gc.k}, ${node.k} đã cân bằng.`});}
+    else{gc=child.l;node.r=rotR(child);
+      steps.push({tree:clone(root),flags:{moved:[child.k,gc.k]},i,cs,text:`Xoay kép, phép thứ nhất: xoay phải tại nút con ${child.k}. ${gc.k} đi lên, đưa cây về dạng RR.`});
+      attach(rotL(node));
+      steps.push({tree:clone(root),flags:{moved:[node.k,gc.k]},i,cs,text:`Phép thứ hai: xoay trái tại ${node.k}. ${gc.k} trở thành gốc của nhánh, cả ba nút ${node.k}, ${gc.k}, ${child.k} đã cân bằng.`});}
+  });
+  steps.push({tree:clone(root),flags:{},i:seq.length,cs:'',text:`Đã thêm xong ${seq.length} nút. Cây AVL cuối cùng có chiều cao ${H(root)}, mọi hệ số cân bằng đều thuộc {−1, 0, +1}.`});
+  let maxD=1;steps.forEach(s=>{maxD=Math.max(maxD,H(s.tree));});
+  const dx=54,dy=72;
+  return {steps,seq,dx,dy,W:Math.max(420,(seq.length-1)*dx+120),Ht:(maxD-1)*dy+110};
+}
+function layoutTree(t,B){
+  const nodes=[],edges=[];let idx=0;
+  (function walk(n,d,p){if(!n)return;walk(n.l,d+1,n);nodes.push({k:n.k,d,i:idx++});if(p)edges.push([p.k,n.k]);walk(n.r,d+1,n);})(t,0,null);
+  const pos={};nodes.forEach(o=>{pos[o.k]={x:B.W/2+(o.i-(nodes.length-1)/2)*B.dx,y:46+o.d*B.dy};});
+  return {pos,edges};
+}
+function bfMap(t){const m={};(function h(n){if(!n)return 0;const a=h(n.l),b=h(n.r);m[n.k]=b-a;return 1+Math.max(a,b);})(t);return m;}
+let avlPos={},avlRaf=0;
+function paintAVL(B,st,cur,edges,bf){
+  let s=`<svg viewBox="0 0 ${B.W} ${B.Ht}" role="img" aria-label="Cây AVL">`;
+  edges.forEach(([a,b])=>{const A=cur[a],C=cur[b];s+=`<line class="te" x1="${A.x}" y1="${A.y}" x2="${C.x}" y2="${C.y}" style="opacity:${C.a}"/>`;});
+  Object.keys(cur).forEach(key=>{
+    const k=+key,p=cur[k],f=st.flags;
+    let ring='';
+    if(f.viol===k)ring='viol';else if(f.moved&&f.moved.includes(k))ring='mv';else if(f.nw===k)ring='';
+    const showRing=f.viol===k||(f.moved&&f.moved.includes(k))||f.nw===k;
+    s+=`<g style="opacity:${p.a}">`;
+    if(showRing)s+=`<circle class="ring ${ring}" cx="${p.x}" cy="${p.y}" r="28"/>`;
+    s+=`<g class="vt"><circle class="vc" cx="${p.x}" cy="${p.y}" r="21" style="fill:var(--panel)"/><text x="${p.x}" y="${p.y}" style="fill:var(--ink)">${k}</text></g>`;
+    s+=`<text class="bf ${Math.abs(bf[k])>1?'bad':''}" x="${p.x+25}" y="${p.y-20}">${fmt(bf[k])}</text></g>`;
+  });
+  $('vis').innerHTML=s+'</svg>';
+}
+function drawAVL(B,st,animate){
+  const {pos,edges}=layoutTree(st.tree,B),bf=bfMap(st.tree);
+  const from=animate?{...avlPos}:{};
+  const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  cancelAnimationFrame(avlRaf);
+  const t0=performance.now(),dur=(animate&&!reduce)?520:0;
+  const frame=now=>{
+    const p=dur?Math.min(1,(now-t0)/dur):1,e=1-Math.pow(1-p,3),cur={};
+    for(const k in pos){
+      const f=from[k]||{x:pos[k].x,y:pos[k].y-34,a:0};
+      cur[k]={x:f.x+(pos[k].x-f.x)*e,y:f.y+(pos[k].y-f.y)*e,a:from[k]?1:(dur?e:1)};
+    }
+    avlPos=cur;paintAVL(B,st,cur,edges,bf);
+    if(p<1)avlRaf=requestAnimationFrame(frame);
+  };
+  if(!st.tree){avlPos={};$('vis').innerHTML=`<svg viewBox="0 0 ${B.W} ${B.Ht}"><text x="${B.W/2}" y="${B.Ht/2}" text-anchor="middle" style="fill:var(--muted);font-size:16px">Cây rỗng</text></svg>`;return;}
+  avlRaf=requestAnimationFrame(frame);
+}
+function renderAVL(animate){
+  const B=S.built.avl,st=B.steps[S.idx.avl];
+  drawAVL(B,st,animate);
+  $('legend').textContent='Số nhỏ cạnh mỗi nút là hệ số cân bằng (phải − trái). Vòng vàng: nút vừa thêm. Vòng đỏ: nút vi phạm. Vòng xanh: các nút đang được xoay.';
+  const h=st.tree?H(st.tree):0;
+  $('stats').innerHTML=`<div><span>Đang thêm</span><b>${st.i>=0&&st.i<B.seq.length?B.seq[st.i]:'–'}</b></div><div><span>Chiều cao cây</span><b>${h}</b></div>`;
+  $('say').innerHTML=st.text;
+  let l='<h3>Dãy cần thêm</h3><div class="chips">'+B.seq.map((k,j)=>`<span class="chip ${j<st.i?'done':j===st.i?'now':''}">${k}</span>`).join('')+'</div>';
+  l+='<h3 style="margin-top:16px">Bốn trường hợp mất cân bằng</h3><table class="cases"><thead><tr><th>Loại</th><th>Nút mới nằm ở</th><th>Cách xử lý</th></tr></thead><tbody>';
+  ['LL','RR','LR','RL'].forEach(c=>{l+=`<tr class="${st.cs===c?'on':''}"><td><b>${c}</b></td><td>${CASES[c].d}</td><td>${CASES[c].a}</td></tr>`;});
+  $('list').innerHTML=l+'</tbody></table>';
+}
+
+/* ================= điều khiển chung ================= */
+const S={mode:'kruskal',g:'vd',start:0,seq:[3,2,1,4,5,6,7],built:{},idx:{kruskal:0,prim:0,avl:0},timer:null,seqErr:''};
+function build(m){
+  if(m==='kruskal')S.built.kruskal=buildKruskal(S.g);
+  if(m==='prim')S.built.prim=buildPrim(S.g,S.start);
+  if(m==='avl')S.built.avl=buildAVL(S.seq);
+  S.idx[m]=0;
+}
+const len=()=>S.built[S.mode].steps.length;
+function render(animate){
+  const m=S.mode,i=S.idx[m],n=len();
+  if(m==='kruskal')renderKruskal();else if(m==='prim')renderPrim();else renderAVL(animate);
+  $('prog').style.width=(n>1?i/(n-1)*100:0)+'%';
+  $('cnt').textContent='Bước '+(i+1)+' / '+n;
+  $('bFirst').disabled=$('bPrev').disabled=i===0;
+  $('bNext').disabled=i===n-1;
+}
+function go(i,animate=true){
+  S.idx[S.mode]=Math.max(0,Math.min(len()-1,i));
+  render(animate);
+  if(S.idx[S.mode]===len()-1)stopAuto();
+}
+function stopAuto(){clearInterval(S.timer);S.timer=null;$('bAuto').textContent='Tự chạy';}
+function toggleAuto(){
+  if(S.timer){stopAuto();return;}
+  if(S.idx[S.mode]===len()-1)go(0,false);
+  $('bAuto').textContent='Dừng';
+  S.timer=setInterval(()=>go(S.idx[S.mode]+1),2100);
+}
+function renderOpts(){
+  const o=$('opts'),m=S.mode;
+  const gsel=()=>`<label>Đồ thị <select id="selG">${Object.keys(GR).map(k=>`<option value="${k}"${k===S.g?' selected':''}>${GR[k].name}</option>`).join('')}</select></label>`;
+  if(m==='kruskal')o.innerHTML=gsel();
+  else if(m==='prim')o.innerHTML=gsel()+`<label>Đỉnh xuất phát <select id="selS">${GR[S.g].labels.map((l,v)=>`<option value="${v}"${v===S.start?' selected':''}>${l}</option>`).join('')}</select></label>`;
+  else o.innerHTML=`<label>Dãy số thêm vào <input type="text" id="seqIn" value="${S.seq.join(', ')}" aria-label="Dãy số cách nhau bởi dấu phẩy"></label><button type="button" id="seqGo">Dựng lại</button><span class="err" id="seqErr">${S.seqErr}</span>`;
+  const sg=$('selG');
+  if(sg)sg.onchange=e=>{S.g=e.target.value;S.start=0;stopAuto();build('kruskal');build('prim');renderOpts();render(false);};
+  const ss=$('selS');
+  if(ss)ss.onchange=e=>{S.start=+e.target.value;stopAuto();build('prim');render(false);};
+  const sb=$('seqGo');
+  if(sb){
+    const apply=()=>{
+      const nums=[...new Set(($('seqIn').value.match(/-?\d{1,3}/g)||[]).map(Number))];
+      if(nums.length<1||nums.length>12){S.seqErr='Nhập từ 1 đến 12 số khác nhau, cách nhau bởi dấu phẩy.';$('seqErr').textContent=S.seqErr;return;}
+      S.seqErr='';$('seqErr').textContent='';S.seq=nums;stopAuto();build('avl');render(false);
+    };
+    sb.onclick=apply;
+    $('seqIn').addEventListener('keydown',e=>{if(e.key==='Enter')apply();});
+  }
+}
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',x===t));
+  S.mode=t.dataset.mode;stopAuto();renderOpts();render(false);
+}));
+$('bFirst').onclick=()=>go(0,false);
+$('bPrev').onclick=()=>go(S.idx[S.mode]-1,false);
+$('bNext').onclick=()=>go(S.idx[S.mode]+1);
+$('bAuto').onclick=toggleAuto;
+document.addEventListener('keydown',e=>{
+  if(['INPUT','SELECT'].includes(e.target.tagName))return;
+  if(e.key==='ArrowRight')go(S.idx[S.mode]+1);
+  else if(e.key==='ArrowLeft')go(S.idx[S.mode]-1,false);
+});
+
+build('kruskal');build('prim');build('avl');
+renderOpts();render(false);
+})();
+</script>
+</body>
+</html>
